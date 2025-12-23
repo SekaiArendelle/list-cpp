@@ -62,7 +62,7 @@ public:
 
     template<::std::same_as<value_type>... Args>
         requires (sizeof...(Args) > 0)
-    constexpr List(Args&&... args) noexcept {
+    constexpr List(Args&&... args) {
         // TODO
     }
 
@@ -78,10 +78,10 @@ public:
         // TODO
     }
 
-    constexpr auto operator=(this List& self, List const& other) noexcept -> List& {
+    constexpr auto operator=(this List& self, List const& other) -> List& {
     } // TODO
 
-    constexpr auto operator=(this List& self, List&& other) noexcept -> List& {
+    constexpr auto operator=(this List& self, List&& other) -> List& {
     } // TODO
 
     constexpr auto is_empty(this List const& self) noexcept -> bool {
@@ -98,9 +98,23 @@ public:
         return self.next != self.prev;
     }
 
-    constexpr void push_front(this List& self, T const& value) noexcept {
+    constexpr void push_front(this auto&& self, T const& value) noexcept(
+        noexcept(self.allocator.allocate(sizeof(Node))) &&
+        noexcept(::std::construct_at(self.allocator.allocate(sizeof(Node)), value))) {
         Node* ptr = static_cast<Node*>(self.allocator.allocate(sizeof(Node)));
         ::std::construct_at(::std::addressof(ptr->value), value);
+        ptr->next = self.next;
+        ptr->prev = static_cast<details::ListPtrGroup*>(::std::addressof(self));
+        self.next = ptr;
+        ptr->next->prev = ptr;
+    }
+
+    constexpr void push_front(this auto&& self,
+                              T&& value) noexcept(noexcept(self.allocator.allocate(sizeof(Node))) &&
+                                                  noexcept(::std::construct_at(self.allocator.allocate(sizeof(Node)),
+                                                                               ::std::move(value)))) {
+        Node* ptr = static_cast<Node*>(self.allocator.allocate(sizeof(Node)));
+        ::std::construct_at(::std::addressof(ptr->value), ::std::move(value));
         ptr->next = self.next;
         ptr->prev = static_cast<details::ListPtrGroup*>(::std::addressof(self));
         self.next = ptr;
